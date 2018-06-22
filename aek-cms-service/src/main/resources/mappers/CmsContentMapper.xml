@@ -1,0 +1,485 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aek.ebey.cms.mapper.CmsContentMapper">
+
+	<!-- 通用查询映射结果 -->
+	<resultMap id="BaseResultMap" type="com.aek.ebey.cms.model.CmsContent">
+		<id column="id" property="id" />
+		<result column="title" property="title" />
+		<result column="content" property="content" />
+		<result column="type" property="type" />
+		<result column="url" property="url" />
+		<result column="create_by" property="createBy" />
+		<result column="release_by" property="releaseBy" />
+		<result column="from_tenant_id" property="fromTenantId" />
+		<result column="from_tenant_name" property="fromTenantName" />
+		<result column="from_dept_name" property="fromDeptName" />
+		<result column="to_tenant_ids" property="toTenantIds" />
+		<result column="to_tenant_ids_copy" property="toTenantIdsCopy" />
+		<result column="create_time" property="createTime" />
+		<result column="update_by" property="updateBy" />
+		<result column="update_time" property="updateTime" />
+		<result column="release_time" property="releaseTime" />
+		<result column="expire_time" property="expireTime" />
+		<result column="remarks" property="remarks" />
+		<result column="enable" property="enable" />
+		<result column="del_flag" property="delFlag" />
+		<result column="custom_data" property="customData" />
+	</resultMap>
+	
+	<resultMap id="ComplaintVOMap" type="com.aek.ebey.cms.model.vo.ComplaintVO">
+		<id column="id" property="id" />
+		<result column="title" property="title" />
+		<result column="content" property="content" />
+		<result column="type" property="type" />
+		<result column="publisher" property="publisher" />
+		<result column="org" property="org" />
+		<result column="publishTime" property="publishTime" />
+		<result column="isRead" property="isRead" />
+		<result column="reply" property="reply" />
+		<result column="replyOrg" property="replyOrg" />
+		<result column="replyTime" property="replyTime" />
+		<result column="replyContent" property="replyContent" />
+	</resultMap>
+	
+	<resultMap id="ConsultationVOMap" type="com.aek.ebey.cms.model.vo.ConsultationVO">
+		<id column="id" property="id" />
+		<result column="title" property="title" />
+		<result column="content" property="content" />
+		<result column="type" property="type" />
+		<result column="publisher" property="publisher" />
+		<result column="org" property="org" />
+		<result column="publishTime" property="publishTime" />
+		<result column="isRead" property="isRead" />
+		<result column="reply" property="reply" />
+		<result column="replyOrg" property="replyOrg" />
+		<result column="replyTime" property="replyTime" />
+		<result column="replyContent" property="replyContent" />
+	</resultMap>
+	
+	<resultMap id="ContentVOMap" type="com.aek.ebey.cms.model.vo.ContentVO">
+		<id column="id" property="id" />
+		<result column="title" property="title" />
+		<result column="content" property="content" />
+		<result column="frontType" property="frontType" />
+		<result column="type" property="type" />
+		<result column="publisher" property="publisher" />
+		<result column="org" property="org" />
+		<result column="publishTime" property="publishTime" />
+		<result column="isRead" property="isRead" />
+		<result column="isNew" property="isNew" />
+	</resultMap>
+	
+	<resultMap id="StatsVOMap" type="com.aek.ebey.cms.model.vo.StatsVO">
+		<result column="type" property="type" />
+		<result column="count" property="count" />
+		<result column="hasNews" property="hasNews" />
+	</resultMap>
+	
+  
+    <select id="statsCountsByType" resultMap="BaseResultMap">
+    	SELECT
+			COUNT(*) as count,
+			type
+		FROM
+			cms_content cc
+		LEFT JOIN 
+			cms_content_user ccu 
+		ON 
+			cc.id = ccu.content_id
+		WHERE 
+			cc.enable = 1
+		AND cc.del_flag = 0
+		AND cc.id IN 
+		<if test="contentIds != null and contentIds.size() > 0">
+			<foreach collection="contentIds" item="item" index="index" open="(" separator="," close=")">
+			#{item}
+			</foreach>
+		</if>
+		GROUP BY
+			cc.type
+    </select>
+    
+    <select id="getIsNews" resultType="java.lang.Boolean">
+    	select CASE WHEN r.content_id is null then FALSE else TRUE END as isNews
+			from cms_content c
+		LEFT JOIN (SELECT content_id FROM cms_reply WHERE 1=1 GROUP BY content_id) r ON r.content_id=c.id
+		WHERE c.id=#{id}
+    </select>
+       
+    <select id="findUserHas" resultType="java.lang.Long" parameterType="java.lang.Long">
+    	SELECT id FROM cms_content WHERE del_flag=0 and find_in_set(#{tenantId}, to_tenant_ids)
+    </select>
+    
+    <select id="findUserHasAll" resultMap="BaseResultMap" parameterType="java.lang.Long">
+    	SELECT * FROM cms_content WHERE del_flag=0 and find_in_set(#{tenantId}, to_tenant_ids)
+    </select>
+    
+    <!-- 根据内容类型查找最新发布  -->
+    <!-- <select id="findNewest" resultMap="BaseResultMap">
+    	SELECT
+			*
+		FROM
+			cms_content
+		WHERE
+			del_flag = 0
+		AND id = (
+			SELECT
+				MAX(id)
+			FROM
+				cms_content
+		WHERE
+			del_flag=0 AND type =#{type} AND FIND_IN_SET(#{user.tenantId},to_tenant_ids)
+		)
+    </select> -->
+    
+    <!-- 根据内容类型查找最新发布id  -->
+    <select id="findNewestId" resultType="long">
+    	SELECT
+			MAX(id)
+		FROM
+			cms_content
+		WHERE
+			del_flag = 0
+		AND update_time = (
+			SELECT
+				MAX(update_time)
+			FROM
+				cms_content
+		WHERE
+			del_flag=0 AND type =#{type} AND FIND_IN_SET(#{user.tenantId},to_tenant_ids)
+		)
+    </select>
+    
+    <!--消息、文章、通知分页查询-->
+    <select id="getContentPage" resultMap="ContentVOMap">
+    	select t.id,t.title,t.content as content,t.release_person_name as publisher,t.from_tenant_name as org,t.update_time as publishTime,t.isRead from (
+			select c.*,case when u.id is null then 0 else 1 END as isRead 
+		from cms_content c
+			left join cms_content_user u on c.id = u.content_id and u.user_id=#{user.id}
+		where FIND_IN_SET(#{user.tenantId},to_tenant_ids)) t
+		where t.del_flag=0 and t.type=#{q.type}
+		<if test="q.keyword != null and q.keyword !=''">
+			and (t.title LIKE CONCAT('%',#{q.keyword},'%') or t.from_tenant_name like CONCAT('%',#{q.keyword},'%'))
+		</if>
+		order by t.isRead asc,t.update_time desc
+    </select>
+    
+    <!-- 小程序消息、文章、通知首页查询,针对于最新发布 -->
+    <select id="getFrontList" resultMap="ContentVOMap">
+    	select t.id,t.title,t.content as content,t.type as frontType,t.from_tenant_name as org,t.update_time as publishTime,t.isRead from (
+			select c.*,case when u.id is null then 0 else 1 END as isRead
+		FROM cms_content c 
+		LEFT JOIN cms_content_user u ON c.id=u.content_id AND user_id=#{user.id}
+		WHERE c.del_flag = 0 AND c.update_time = (SELECT MAX(update_time) FROM cms_content WHERE type =#{type} AND FIND_IN_SET(#{user.tenantId},to_tenant_ids))) t
+    </select>
+    <!-- 小程序投诉与技术咨询首页查询,针对于最新发布 -->
+    <select id="getFrontBadList" resultMap="ContentVOMap">
+    	select 
+			t.id,title,t.content as content,t.type as frontType,custom_data->'$.complaintType' as type,release_time as publishTime,t.from_tenant_name as org,t.isRead,case when isReply=0 then 2 else 1 end as reply
+		from (
+			select c.*, CASE WHEN r.content_id is null then 0 else 1 END as isReply,
+			case when ((select count(*) from cms_reply where del_flag=0 AND content_id=c.id)-(select count(*) from cms_reply_user where del_flag=0 AND content_id=c.id and user_id=#{user.id})) > 0 then 0 else 1 end as isRead
+			from cms_content c
+			left join (SELECT content_id FROM cms_reply WHERE 1=1 GROUP BY content_id) r ON r.content_id=c.id
+			where c.type =3 AND c.id = (SELECT MAX(id) FROM cms_content WHERE type =3 AND FIND_IN_SET(#{user.tenantId},to_tenant_ids))) t
+		where t.del_flag=0
+    </select>
+    <select id="getFrontConsultList" resultMap="ContentVOMap">
+    	select 
+			t.id as id,title,t.content as content,t.type as frontType,custom_data->'$.consultationType' as type,release_time as publishTime,t.from_tenant_name as org,t.isRead,case when isReply=0 then 2 else 1 end as reply
+		from (
+			select c.*, CASE WHEN r.content_id is null then 0 else 1 END as isReply,
+			case when ((select count(*) from cms_reply where del_flag=0 AND content_id=c.id)-(select count(*) from cms_reply_user where del_flag=0 AND content_id=c.id and user_id=#{user.id})) > 0 then 0 else 1 end as isRead
+			from cms_content c
+			left join (SELECT content_id FROM cms_reply WHERE 1=1 GROUP BY content_id) r ON r.content_id=c.id
+			where c.type =4 AND c.id = (SELECT MAX(id) FROM cms_content WHERE type =4)) t
+		where t.del_flag=0
+    </select>
+    <!-- 以上 -->
+    
+    
+    
+    
+   <!-- 医疗机构技术咨询列表查询 -->
+   <select id="getConsultationPage" resultMap="ConsultationVOMap">
+    	select 
+			id,title,t.content as content,custom_data->'$.consultationType' as type,release_person_name as publisher,release_time as publishTime,from_dept_name as org,t.isRead,case when isReply=0 then 2 else 1 end as reply
+		from (
+			select c.*, CASE WHEN r.content_id is null then 0 else 1 END as isReply,
+			case when ((select count(*) from cms_reply where del_flag=0 AND content_id=c.id)-(select count(*) from cms_reply_user where del_flag=0 AND content_id=c.id and user_id=#{user.id})) > 0 then 0 else 1 end as isRead
+			from cms_content c
+			left join (SELECT content_id FROM cms_reply WHERE 1=1 GROUP BY content_id) r ON r.content_id=c.id
+			where c.type =4) t
+		where t.del_flag=0
+		<!--已回复-->
+		<if test="q.order != null and q.order ==1">
+			 and t.isReply=1
+			<if test="q.keyword != null and q.keyword !=''">
+				and (t.title LIKE CONCAT('%',#{q.keyword},'%'))
+			</if>
+			<if test="q.type != null">
+				and custom_data->'$.consultationType'=#{q.type}
+			</if>
+			order by t.isRead asc,t.update_time desc
+		</if>	
+		<!--待回复-->
+		<if test="q.order != null and q.order ==2">
+			and t.isReply=0
+			<if test="q.keyword != null and q.keyword !=''">
+				and (t.title LIKE CONCAT('%',#{q.keyword},'%'))
+			</if>
+			<if test="q.type != null">
+				and custom_data->'$.consultationType'=#{q.type}
+			</if>
+			order by t.isRead asc,t.update_time desc
+		</if>
+		<!--默认排序-->
+		<if test="q.order == null or q.order ==0">
+			<if test="q.keyword != null and q.keyword !=''">
+				and (t.title LIKE CONCAT('%',#{q.keyword},'%'))
+			</if>
+			<if test="q.type != null">
+				and custom_data->'$.consultationType'=#{q.type}
+			</if>
+			order by t.isRead asc,t.isReply desc,t.update_time DESC
+		</if>
+    </select>
+    
+    
+   	<!-- 医疗机构投诉与不良事件列表查询 -->
+    <select id="getComplaintPage" resultMap="ComplaintVOMap">   
+   		select 
+			id,title,t.content as content,custom_data->'$.complaintType' as type,release_person_name as publisher,release_time as publishTime,from_dept_name as org,t.isRead,case when isReply=0 then 2 else 1 end as reply
+		from (
+			select c.*, CASE WHEN r.content_id is null then 0 else 1 END as isReply,
+			case when ((select count(*) from cms_reply where del_flag=0 AND content_id=c.id)-(select count(*) from cms_reply_user where del_flag=0 AND content_id=c.id and user_id=#{user.id})) > 0 then 0 else 1 end as isRead
+			from cms_content c
+			left join (SELECT content_id FROM cms_reply WHERE 1=1 GROUP BY content_id) r ON r.content_id=c.id
+			where c.from_tenant_id =#{user.tenantId} and c.type =3) t
+		where t.del_flag=0
+		<!--已回复-->
+		<if test="q.order != null and q.order ==1">
+			 and t.isReply=1
+			<if test="q.keyword != null and q.keyword !=''">
+				and (t.title LIKE CONCAT('%',#{q.keyword},'%'))
+			</if>
+			<if test="q.type != null">
+				and custom_data->'$.complaintType'=#{q.type}
+			</if>
+			order by t.isRead asc,t.update_time desc
+		</if>	
+		<!--待回复-->
+		<if test="q.order != null and q.order ==2">
+			and t.isReply=0
+			<if test="q.keyword != null and q.keyword !=''">
+				and (t.title LIKE CONCAT('%',#{q.keyword},'%'))
+			</if>
+			<if test="q.type != null">
+				and custom_data->'$.complaintType'=#{q.type}
+			</if>
+			order by t.isRead asc,t.update_time desc
+		</if>
+		<!--默认排序-->
+		<if test="q.order == null or q.order ==0">
+			<if test="q.keyword != null and q.keyword !=''">
+				and (t.title LIKE CONCAT('%',#{q.keyword},'%'))
+			</if>
+			<if test="q.type != null">
+				and custom_data->'$.complaintType'=#{q.type}
+			</if>
+			order by t.isRead asc,t.isReply desc,t.update_time DESC
+		</if>
+    </select>
+    
+  	<!--监管机构统计未读 -->
+    <select id="statsUnread" resultMap="StatsVOMap">
+    	select
+			t.type
+		from (
+			select c.*,case when u.id is null then 0 else 1 END as isRead 
+			from cms_content c
+			left join cms_content_user u on c.id = u.content_id and u.user_id=#{userId}
+		) t where t.del_flag=0 and FIND_IN_SET(#{tenantId},to_tenant_ids) AND t.type in(0,1,2,3) AND  t.isRead = 0 GROUP BY t.type
+    </select>
+    
+    <!--监管机构统计技术咨询未读 -->
+    <select id="statsUnreadForConsult" resultMap="StatsVOMap">
+    	select
+			t.type
+		from (
+			select c.*,case when u.id is null then 0 else 1 END as isRead 
+			from cms_content c
+			left join cms_content_user u on c.id = u.content_id and u.user_id=#{userId}
+		) t where t.del_flag=0 AND t.type=4 AND  t.isRead = 0 GROUP BY t.type
+    </select>
+    
+    <!--医疗机构统计文章，消息，通知未读 -->
+    <select id="statsUnreadForHospital" resultMap="StatsVOMap">
+    	select
+			t.type
+		from (
+			select c.*,case when u.id is null then 0 else 1 END as isRead 
+			from cms_content c
+			left join cms_content_user u on c.id = u.content_id and u.user_id=#{userId}
+		) t where FIND_IN_SET(#{tenantId},to_tenant_ids) AND t.del_flag=0 AND t.isRead = 0 AND t.type in(0,1,2) GROUP BY t.type
+    </select>
+    
+    <!--医疗机构统计不良事件、技术咨询未读 -->
+    <select id="statsBadUnreadForHospital" resultMap="StatsVOMap">
+    	select 
+			t.type
+		from (
+			select c.*, CASE WHEN r.content_id is null then 0 else 1 END as isReply,
+			case when ((select count(*) from cms_reply where content_id=c.id)-(select count(*) from cms_reply_user where content_id=c.id and user_id=#{userId})) > 0 then 0 else 1 end as isRead
+			from cms_content c
+			left join (SELECT content_id FROM cms_reply WHERE 1=1 GROUP BY content_id) r ON r.content_id=c.id) t
+		where FIND_IN_SET(#{tenantId},to_tenant_ids) AND t.del_flag=0 AND t.type=3 AND t.isRead=0 GROUP BY t.type
+    </select>
+    
+    <!--医疗机构统计技术咨询未读 -->
+    <select id="statsAskUnreadForHospital" resultMap="StatsVOMap">
+    	select 
+			t.type
+		from (
+			select c.*, CASE WHEN r.content_id is null then 0 else 1 END as isReply,
+			case when ((select count(*) from cms_reply where content_id=c.id)-(select count(*) from cms_reply_user where content_id=c.id and user_id=#{userId})) > 0 then 0 else 1 end as isRead
+			from cms_content c
+			left join (SELECT content_id FROM cms_reply WHERE 1=1 GROUP BY content_id) r ON r.content_id=c.id) t
+		where t.del_flag=0 AND t.type=4 AND t.isRead=0 GROUP BY t.type
+    </select>
+    
+    <!--医疗机构按类型统计数目 -->
+    <select id="statsNumByTypeForHospital" resultMap="StatsVOMap">
+    	SELECT COUNT(*) as count,type FROM cms_content WHERE FIND_IN_SET(#{tenantId},to_tenant_ids) and type in(0,1,2,3) AND del_flag=0 GROUP BY type
+    </select>
+      
+    <!--监管机构按类型统计数目 -->
+    <select id="statsNumByType" resultMap="StatsVOMap">
+    	SELECT COUNT(*) as count,type FROM cms_content WHERE del_flag=0 and type in(0,1,2,3) and FIND_IN_SET(#{tenantId},to_tenant_ids) GROUP BY type
+    </select>
+    
+    <!--监管机构按类型统计技术咨询数目 -->
+    <select id="statsNumByTypeForConsult" resultMap="StatsVOMap">
+    	SELECT COUNT(*) as count,type FROM cms_content WHERE del_flag=0 and type=4 GROUP BY type
+    </select>
+    
+    <!--监管机构不良事件列表查询 -->
+    <select id="getComplaitPageForManage" resultMap="ComplaintVOMap">
+    	select 
+			id,title,custom_data->'$.complaintType' as type,release_person_name as publisher,release_time as publishTime,t.from_tenant_name as org,t.isRead,case when isReply=0 then 2 else 1 end as reply
+		from (
+			select c.*,case when u.id is null then 0 else 1 END as isRead,CASE WHEN r.content_id is null then 0 else 1 END as isReply
+		from cms_content c
+		LEFT JOIN cms_content_user u on c.id = u.content_id and u.user_id=#{user.id}
+		LEFT JOIN (SELECT content_id FROM cms_reply WHERE 1=1 GROUP BY content_id) r ON r.content_id=c.id) t
+		WHERE t.del_flag=0 AND FIND_IN_SET(#{user.tenantId},to_tenant_ids) AND t.type=3
+		<!--已回复-->
+		<if test="q.order != null and q.order ==1">
+			 and t.isReply=1
+			<if test="q.keyword != null and q.keyword !=''">
+				and (t.title LIKE CONCAT('%',#{q.keyword},'%') or t.from_tenant_name like CONCAT('%',#{q.keyword},'%'))
+			</if>
+			<if test="q.type != null">
+				and custom_data->'$.complaintType'=#{q.type}
+			</if>
+			order by t.isRead asc,t.update_time desc
+		</if>	
+		<!--待回复-->
+		<if test="q.order != null and q.order ==2">
+			and t.isReply=0
+			<if test="q.keyword != null and q.keyword !=''">
+				and (t.title LIKE CONCAT('%',#{q.keyword},'%') or t.from_tenant_name like CONCAT('%',#{q.keyword},'%'))
+			</if>
+			<if test="q.type != null">
+				and custom_data->'$.complaintType'=#{q.type}
+			</if>
+			order by t.isRead asc,t.update_time desc
+		</if>
+		<!--默认排序-->
+		<if test="q.order == null or q.order ==0">
+			<if test="q.keyword != null and q.keyword !=''">
+				and (t.title LIKE CONCAT('%',#{q.keyword},'%') or t.from_tenant_name like CONCAT('%',#{q.keyword},'%'))
+			</if>
+			<if test="q.type != null">
+				and custom_data->'$.complaintType'=#{q.type}
+			</if>
+			order by t.isRead asc,t.isReply asc,t.update_time desc
+		</if>
+    </select>
+    
+    <!--监管机构技术咨询列表查询 -->
+    <select id="getConsultionPageForManage" resultMap="ConsultationVOMap">
+    	select 
+			id,title,custom_data->'$.consultationType' as type,release_person_name as publisher,release_time as publishTime,t.from_tenant_name as org,t.isRead,case when isReply=0 then 2 else 1 end as reply
+		from (
+			select c.*,case when u.id is null then 0 else 1 END as isRead,CASE WHEN r.content_id is null then 0 else 1 END as isReply
+		from cms_content c
+		LEFT JOIN cms_content_user u on c.id = u.content_id and u.user_id=#{user.id}
+		LEFT JOIN (SELECT content_id FROM cms_reply WHERE 1=1 GROUP BY content_id) r ON r.content_id=c.id) t
+		WHERE t.del_flag=0 AND t.type=4
+		<!--已回复-->
+		<if test="q.order != null and q.order ==1">
+			 and t.isReply=1
+			<if test="q.keyword != null and q.keyword !=''">
+				and (t.title LIKE CONCAT('%',#{q.keyword},'%') or t.from_tenant_name like CONCAT('%',#{q.keyword},'%'))
+			</if>
+			<if test="q.type != null">
+				and custom_data->'$.consultationType'=#{q.type}
+			</if>
+			order by t.isRead asc,t.update_time desc
+		</if>	
+		<!--待回复-->
+		<if test="q.order != null and q.order ==2">
+			and t.isReply=0
+			<if test="q.keyword != null and q.keyword !=''">
+				and (t.title LIKE CONCAT('%',#{q.keyword},'%') or t.from_tenant_name like CONCAT('%',#{q.keyword},'%'))
+			</if>
+			<if test="q.type != null">
+				and custom_data->'$.consultationType'=#{q.type}
+			</if>
+			order by t.isRead asc,t.update_time desc
+		</if>
+		<!--默认排序-->
+		<if test="q.order == null or q.order ==0">
+			<if test="q.keyword != null and q.keyword !=''">
+				and (t.title LIKE CONCAT('%',#{q.keyword},'%') or t.from_tenant_name like CONCAT('%',#{q.keyword},'%'))
+			</if>
+			<if test="q.type != null">
+				and custom_data->'$.consultationType'=#{q.type}
+			</if>
+			order by t.isRead asc,t.isReply asc,t.update_time desc
+		</if>
+    </select>
+    
+    <select id="isExist" resultMap="BaseResultMap">
+    	SELECT * FROM cms_content WHERE FIND_IN_SET(#{tenantId},to_tenant_ids) AND id=#{id};
+    </select>
+    
+    <update id="updateContentById">
+    	UPDATE cms_content
+			SET 
+			<if test="c.title != null">
+ 				title = #{c.title},
+ 			</if>
+			<if test="c.content != null">
+ 				content = #{c.content},
+ 			</if>			
+ 			<if test="c.toTenantIds != null">
+ 				to_tenant_ids = #{c.toTenantIds},
+ 			</if>
+ 			<if test="c.toTenantIdsCopy != null">
+ 				to_tenant_ids_copy = #{c.toTenantIdsCopy},
+ 			</if>	
+ 				url = #{c.url},		
+ 				update_by =  #{c.updateBy},
+ 				update_time = #{c.updateTime}
+		WHERE
+			id = #{c.id}
+    </update>
+    
+    <select id="getByIdNotDel" resultMap="BaseResultMap">
+    	SELECT * FROM cms_content WHERE id=#{id} AND del_flag=0
+    </select>
+    
+</mapper>

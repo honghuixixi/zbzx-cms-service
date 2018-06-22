@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE generatorConfiguration
+        PUBLIC "-//mybatis.org//DTD MyBatis Generator Configuration 1.0//EN"
+        "http://mybatis.org/dtd/mybatis-generator-config_1_0.dtd">
+
+<generatorConfiguration>
+    <classPathEntry location="/Users/bamboo/localRepository/mysql/mysql-connector-java/5.1.21/mysql-connector-java-5.1.21.jar"/>
+   
+    <!-- id是报错title,后面这使用mybatis3比较好-->
+    <context id="mybatis-generator-plugins" targetRuntime="MyBatis3">
+        <!-- generate entity时，生成serialVersionUID -->
+        <plugin type="org.mybatis.generator.plugins.SerializablePlugin" />
+
+        <commentGenerator type="org.mybatis.generator.internal.HairyCommentGenerator">
+            <property name="suppressDate" value="false"/>
+            <!--注释-->
+            <property name="suppressAllComments" value="false"/>
+        </commentGenerator>
+
+        <jdbcConnection driverClass="com.mysql.jdbc.Driver"
+                        connectionURL="jdbc:mysql://192.168.1.57:3306/ebey"
+                        userId="root"
+                        password="root.56">
+        </jdbcConnection>
+
+        <javaModelGenerator targetPackage="com.aek.sys.model"
+                            targetProject="MAVEN">
+            <property name="enableSubPackages" value="true"/>
+            <property name="trimStrings" value="true"/>
+        </javaModelGenerator>
+
+        <sqlMapGenerator targetPackage="com.aek.sys.provider.sys"
+                         targetProject="MAVEN">
+            <property name="enableSubPackages" value="true"/>
+        </sqlMapGenerator>
+
+        <javaClientGenerator targetPackage="com.aek.sys.provider.sys.mapper"
+                             targetProject="MAVEN" type="XMLMAPPER">
+            <property name="enableSubPackages" value="true"/>
+        </javaClientGenerator>
+
+        <table tableName="sys_office" domainObjectName="SysOffice"
+               enableCountByExample="false" enableUpdateByExample="false"
+               enableDeleteByExample="false" enableSelectByExample="false"
+               selectByExampleQueryId="false">
+        </table>
+
+    </context>
+</generatorConfiguration>

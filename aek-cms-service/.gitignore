@@ -1,0 +1,5 @@
+*.class
+
+target/
+.apt_generated/
+*.iml

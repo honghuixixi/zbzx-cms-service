@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.aek.ebey.cms.mapper.CmsContentUserMapper">
+
+	<!-- 通用查询映射结果 -->
+	<resultMap id="BaseResultMap" type="com.aek.ebey.cms.model.CmsContentUser">
+		<id column="id" property="id" />
+		<result column="content_id" property="contentId" />
+		<result column="user_id" property="userId" />
+		<result column="del_flag" property="delFlag" />
+		<result column="creat_time" property="creatTime" />
+		<result column="update_time" property="updateTime" />
+		<result column="custom_data" property="customData" />
+	</resultMap>
+
+    <!-- 通用查询结果列 -->
+    <!-- <sql id="Base_Column_List">
+        id, content_id AS contentId,content_type AS contentType, user_id AS userId, mobile, wechat_no AS wechatNo, email, del_flag AS delFlag, creat_time AS creatTime, update_time AS updateTime, reply_status AS replyStatus, isRead AS isread, custom_data AS customData
+    </sql> -->
+    
+    <!-- <select id="statsCount" resultMap="BaseResultMap">
+    	SELECT
+			COUNT(*) staticCount,
+			content_type
+		FROM
+			cms_content_user
+		WHERE
+			del_flag = 0
+		AND is_read = 0
+		AND user_id = #{userId}
+		GROUP BY
+			content_type
+    </select> -->
+    
+    <!-- <select id="findMaxOne" resultType="java.lang.Long">
+    	SELECT
+			id
+		FROM
+			cms_content_user
+		WHERE
+			release_time = (
+			SELECT
+				MAX(release_time)
+			FROM
+				cms_content_user
+			)
+    </select> -->
+    
+    <select  id="findByUserIdAndContentid" resultMap="BaseResultMap">
+    	SELECT * FROM cms_content_user WHERE user_id=#{userId} AND content_id=#{contentId}
+    </select>
+    
+    <select id="findByContentId"  >
+    	select * from cms_content_user where content_id=#{id} AND del_flag=0
+    </select>
+    
+   <!--  <select id="statsNotRead" resultMap="BaseResultMap">
+    	SELECT
+			COUNT(*) staticCount,
+			content_type
+		FROM
+	 		cms_content_user
+		WHERE
+			is_read = 0
+		GROUP BY
+			content_type;
+    </select> -->
+    
+    <delete id="delByContentId">
+    	DELETE FROM cms_content_user WHERE del_flag=0 AND content_id=#{id} AND user_id != #{userId}
+    </delete>
+    
+    <update id="deleteByContentId">
+    	UPDATE cms_content_user
+			SET del_flag = TRUE
+		WHERE
+			content_id = #{id}
+    </update>
+</mapper>
